@@ -36,6 +36,7 @@ public final class Main {
         log.info("Testing standard async client...");
 
         var clientBuilder = S3AsyncClient.builder()
+                .forcePathStyle(true)
                 .credentialsProvider(ProfileCredentialsProvider.builder()
                         .profileName(config.profile)
                         .build())
@@ -57,6 +58,7 @@ public final class Main {
 
         Log.initLoggingToFile(Log.LogLevel.Trace, "aws-sdk.log");
         var clientBuilder = S3AsyncClient.crtBuilder()
+                .forcePathStyle(true)
                 .credentialsProvider(ProfileCredentialsProvider.builder()
                         .profileName(config.profile)
                         .build())
