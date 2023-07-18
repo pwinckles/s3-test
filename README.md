@@ -9,7 +9,8 @@ java -jar s3-test-1.0-SNAPSHOT-exec.jar
 ```
 
 And supply the necessary information as prompted. The tester will then attempt to write a test object to the bucket
-using the standard AWS async client as well as with the new CRT client.
+using the standard AWS async client as well as with the new CRT client. It will **not** delete any objects that are
+successfully written -- you will need to manually delete them.
 
 Look for lines in the output like the following:
 
