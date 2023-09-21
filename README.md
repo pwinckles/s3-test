@@ -1,12 +1,7 @@
 # S3 client test
 
-To run the test execute the following:
-
-```shell
-./mvnw package
-cd target
-java -jar s3-test-1.0-SNAPSHOT-exec.jar
-```
+1. Download a copy of the latest jar from the [releases page](https://github.com/pwinckles/s3-test/releases).
+2. Execute (with the correct version number) `java -jar s3-test-1.0.0-exec.jar`
 
 And supply the necessary information as prompted. The tester will then attempt to write a test object to the bucket
 using the standard AWS async client as well as with the new CRT client. It will **not** delete any objects that are
