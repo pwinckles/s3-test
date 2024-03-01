@@ -6,7 +6,7 @@
 
     <groupId>com.pwinckles</groupId>
     <artifactId>s3-test</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
 
     <name>s3-test</name>
 
