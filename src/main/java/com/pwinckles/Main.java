@@ -12,9 +12,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.auth.signer.AwsSignerExecutionAttribute;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.internal.multipart.MultipartS3AsyncClient;
 import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
@@ -31,22 +33,26 @@ public final class Main {
 
         try {
             testOriginalClient(config, file);
-            //        testCrtClient(config);
+            testCrtClient(config, file);
         } finally {
             Files.deleteIfExists(file);
         }
     }
 
     private static void runTest(String type, String key, Path file, S3AsyncClient client, Config config) {
-        var mpc = MultipartS3AsyncClient.create(
-                client, MultipartConfiguration.builder().build());
-        var transferManager = S3TransferManager.builder().s3Client(mpc).build();
+        var transferManager = S3TransferManager.builder().s3Client(client).build();
 
         try {
             log.info("Attempting to write object {} to bucket {}", key, config.bucket);
             transferManager
-                    .upload(r1 -> r1.putObjectRequest(
-                                    r2 -> r2.bucket(config.bucket).key(key))
+                    .upload(r1 -> r1.putObjectRequest(r2 -> r2.overrideConfiguration(o -> o.putExecutionAttribute(
+                                            AwsSignerExecutionAttribute.SERVICE_CONFIG,
+                                            S3Configuration.builder()
+                                                    .checksumValidationEnabled(false)
+                                                    .pathStyleAccessEnabled(true)
+                                                    .build()))
+                                    .bucket(config.bucket)
+                                    .key(key))
                             .requestBody(AsyncRequestBody.fromFile(file)))
                     .completionFuture()
                     .get();
@@ -71,33 +77,35 @@ public final class Main {
         }
 
         var client = clientBuilder.build();
+        var mpc = MultipartS3AsyncClient.create(
+                client, MultipartConfiguration.builder().build());
 
         var key = config.prefix + "test-standard-" + System.currentTimeMillis() + ".txt";
 
-        runTest("standard async", key, file, client, config);
+        runTest("standard async", key, file, mpc, config);
     }
 
-    //    private static void testCrtClient(Config config) {
-    //        log.info("Testing CRT client...");
-    //
-    //        Log.initLoggingToFile(Log.LogLevel.Trace, "aws-sdk.log");
-    //        var clientBuilder = S3AsyncClient.crtBuilder()
-    //                .forcePathStyle(true)
-    //                .credentialsProvider(ProfileCredentialsProvider.builder()
-    //                        .profileName(config.profile)
-    //                        .build())
-    //                .region(Region.of(config.region));
-    //
-    //        if (config.endpoint != null) {
-    //            clientBuilder.endpointOverride(URI.create(config.endpoint));
-    //        }
-    //
-    //        var client = clientBuilder.build();
-    //
-    //        var key = config.prefix + "test-crt-" + System.currentTimeMillis() + ".txt";
-    //
-    //        runTest("CRT", key, client, config);
-    //    }
+    private static void testCrtClient(Config config, Path file) {
+        log.info("Testing CRT client...");
+
+        var clientBuilder = S3AsyncClient.crtBuilder()
+                .checksumValidationEnabled(false)
+                .forcePathStyle(true)
+                .credentialsProvider(ProfileCredentialsProvider.builder()
+                        .profileName(config.profile)
+                        .build())
+                .region(Region.of(config.region));
+
+        if (config.endpoint != null) {
+            clientBuilder.endpointOverride(URI.create(config.endpoint));
+        }
+
+        var client = clientBuilder.build();
+
+        var key = config.prefix + "test-crt-" + System.currentTimeMillis() + ".txt";
+
+        runTest("CRT", key, file, client, config);
+    }
 
     private static void writeFile(Path path, long size) throws IOException {
         var bytes = new byte[8192];
